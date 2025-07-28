@@ -1,14 +1,13 @@
-#https://github.com/shreya6064/make-space
 
 bl_info = {
     "name": "Make Space",
     "author": "Shreya Punjabi",
-    "version": (1,0),
-    "blender": (3, 4, 1),
+    "version": (2,0),
+    "blender": (4, 4, 3),
     "location": "Node Editor > Operators",
     "description": "Make space quickly in node editors",
     "warning": "",
-    "doc_url": "",
+    "doc_url": "https://github.com/shreya6064/make-space",
     "category": "Node",
 }
 
@@ -16,101 +15,75 @@ import bpy
 
 
 class MakeSpace(bpy.types.Operator):
-    "Move nodes on either side of the cursor to make space in the editor"
+    """Move nodes based on mouse drag direction and distance"""
     bl_idname = "nodes.make_space"
     bl_label = "Make Space"
     bl_options = {'REGISTER', 'UNDO'}
-    
-    x: bpy.props.FloatProperty()
-    y: bpy.props.FloatProperty()
-    dist: bpy.props.IntProperty()
-    
+
+    _start_cursor_x = None
+    _last_cursor_x = None
     _timer = None
 
-    def __init__(self):
-        pass
-        #print("Start")
-
-    def __del__(self):
-        pass
-        #print("End")
-        
-
-    def execute(self, context):
-
-        tree = bpy.context.space_data.edit_tree
-        
-        
-        for n in tree.nodes:
-            if (n.type == "FRAME"):
-                continue
-
-            if (n.location.x > self.x):
-
-                n.location.x += self.dist
-            else:
-                n.location.x -= self.dist
-        
-                
-        return {'FINISHED'}
-
-
     def modal(self, context, event):
-        self.dist =20
+        region = context.region.view2d
+        ui_scale = context.preferences.system.ui_scale
 
-        if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
-            pass
-     
-            
-        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+        if event.type == 'MOUSEMOVE':
+            cursor_x, _ = region.region_to_view(event.mouse_region_x, event.mouse_region_y)
+            cursor_x /= ui_scale
+
+            delta = cursor_x - self._last_cursor_x
+            self._last_cursor_x = cursor_x
+
+            if abs(delta) < 0.001:  #ignore jitters
+                return {'RUNNING_MODAL'}
+
+            tree = context.space_data.edit_tree
+            for node in tree.nodes:
+                if node.type == "FRAME":
+                    continue
+
+                if delta > 0 and node.location.x > self._start_cursor_x:
+                    node.location.x += delta
+                elif delta < 0 and node.location.x < self._start_cursor_x:
+                    node.location.x += delta  # delta is negative, so moves left
+
+        elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self.cancel(context)
             return {"FINISHED"}
 
-        
-        if event.type == 'TIMER':
-
-            self.execute(context)
-            
-        elif event.type == "ESC":
+        elif event.type == 'ESC':
             self.cancel(context)
-            return {"FINISHED"}
-
-        
+            return {"CANCELLED"}
 
         return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
-        
         region = context.region.view2d
         ui_scale = context.preferences.system.ui_scale
-        
-        a, b = region.region_to_view(event.mouse_region_x, event.mouse_region_y)
-        
-        self.x = a/ui_scale
-        self.y = b/ui_scale
-        
-        
+
+        cursor_x, _ = region.region_to_view(event.mouse_region_x, event.mouse_region_y)
+        cursor_x /= ui_scale
+
+        self._start_cursor_x = cursor_x
+        self._last_cursor_x = cursor_x
+
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.05, window=context.window)
-
-
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
-    
-    #has to be explicitly called
+
     def cancel(self, context):
         try:
             wm = context.window_manager
             wm.event_timer_remove(self._timer)
         except:
             pass
-        
+
     @classmethod
-    def poll(self, context):
-        for area in bpy.context.screen.areas:
-            if area.type == 'NODE_EDITOR':
-                return True
-        return False
+    def poll(cls, context):
+        return context.area.type == 'NODE_EDITOR'
+
 
     
     
