@@ -13,7 +13,6 @@ bl_info = {
 
 import bpy
 
-
 class MakeSpace(bpy.types.Operator):
     """Move nodes based on mouse drag direction and distance"""
     bl_idname = "nodes.make_space"
