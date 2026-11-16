@@ -1,8 +1,12 @@
 # make-space
 ### A Blender addon to automatically move nodes and create space in node editors.
 
-Ctrl + leftmouse in any node editor to move nodes on either side of it
+**updated for 5.2.0**
 
-Keep leftmouse held down to create as much space as required. 
+Ctrl + leftmouse and drag in any direction to move nodes above, below, or to the left or right.
+
+Works in all node editors.
+
+Mousewheel changes influence of the operation, similar to proportional editing. Hitting 'o' turns this off and all nodes in the specified direction are moved. 
 
 In operators-> 'Make Space'
